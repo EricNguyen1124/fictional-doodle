@@ -30,6 +30,9 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     if (!state) {
         return SDL_APP_FAILURE;
     }
+
+    *appstate = state;
+
     state->Device = SDL_CreateGPUDevice(
         SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_DXIL | SDL_GPU_SHADERFORMAT_MSL,
         true,

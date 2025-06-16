@@ -1,25 +1,29 @@
-//
-// Created by Eric Nguyen on 5/31/25.
-//
-
 #include "common.h"
 #include <SDL3/SDL.h>
-
+#include <fcntl.h>
 #include <cstdlib>
+#include "utility.h"
 
-char* uint32ToBinary(Uint32 num) {
-    char* result = new char[33];
-    result[32] = '\0';
+void LoadShaders(const char* shaderFileName) {
+    SDL_GPUShaderStage shaderStage;
 
-    for (int i = 31; i >= 0; i--) {
-        if (num & 1) {
-            result[i] = '1';
-        }
-        else {
-            result[i] = '0';
-        }
-        num >>= 1;
+    if (StringContains(shaderFileName, "vert")) {
+        shaderStage = SDL_GPU_SHADERSTAGE_VERTEX;
+    }
+    else if (StringContains(shaderFileName, "frag")) {
+        shaderStage = SDL_GPU_SHADERSTAGE_FRAGMENT;
     }
 
-    return result;
+    constexpr char shaderDirectory[] = "shaders/";
+    const size_t dirLength = strlen(shaderDirectory);
+    const size_t nameLength = strlen(shaderFileName);
+
+    char* directory = (char*)malloc(dirLength + nameLength);
+    strcpy(directory, shaderDirectory);
+    strcat(directory, shaderFileName);
+
+    SDL_Log(directory);
+    char* shaderCode = LoadFile(directory);
+
+    SDL_Log((char*) shaderCode);
 }

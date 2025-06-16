@@ -2,9 +2,8 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 #include <iostream>
-
 #include "common.h"
-
+#include "utility.h"
 
 typedef struct  {
     SDL_Window *Window;
@@ -38,8 +37,9 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
         true,
         nullptr);
 
+    LoadShaders("PositionColor.vert.hlsl");
 
-    SDL_Log(uint32ToBinary(SDL_GetGPUShaderFormats(state->Device)));
+    SDL_Log(Uint32ToBinary(SDL_GetGPUShaderFormats(state->Device)));
     if (state->Device == nullptr)
     {
         SDL_Log("GPUCreateDevice failed");

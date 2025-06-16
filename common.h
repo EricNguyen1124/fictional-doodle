@@ -1,12 +1,8 @@
-//
-// Created by Eric Nguyen on 5/31/25.
-//
-
 #ifndef COMMON_H
 #define COMMON_H
-#include "SDL3/SDL_stdinc.h"
+#include "SDL3/SDL_gpu.h"
 
-char* uint32ToBinary(Uint32 num);
+void LoadShaders(const char* shaderFileName);
 
 #endif //COMMON_H
 

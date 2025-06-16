@@ -7,6 +7,13 @@
 void LoadShaders(const char* shaderFileName) {
     SDL_GPUShaderStage shaderStage;
 
+    if (StringContains("vejvtyveverto", "vert")) {
+        SDL_Log("true");
+    }
+    else {
+        SDL_Log("false");
+    }
+
     if (StringContains(shaderFileName, "vert")) {
         shaderStage = SDL_GPU_SHADERSTAGE_VERTEX;
     }

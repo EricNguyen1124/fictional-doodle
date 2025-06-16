@@ -1,8 +1,8 @@
 #include "utility.h"
 #include "SDL3/SDL_stdinc.h"
-#include <fcntl.h>
 #include <cstdlib>
-#include <SDL3/SDL.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 char* Uint32ToBinary(Uint32 num) {
     char* result = new char[33];
@@ -67,7 +67,7 @@ bool StringContains(const char* searchString, const char* target) {
             targetIndex++;
         }
         else {
-            targetIndex = 0;
+            targetIndex = c == target[0];
         }
     }
     return false;

@@ -14,9 +14,19 @@ add_executable(GameEngine main.cpp
         utility.cpp
         utility.h)
 target_link_libraries(GameEngine PRIVATE SDL3::SDL3)
+
 add_custom_command(TARGET GameEngine
         POST_BUILD
+
+        # Run shadercompile.sh on UNIX
+        COMMAND $<$<NOT:$<PLATFORM_ID:Windows>>:${CMAKE_COMMAND}>
+                -E env bash "${CMAKE_SOURCE_DIR}/shadercompile.sh"
+
+        # Run shadercompile.bat on Windows
+        COMMAND $<$<PLATFORM_ID:Windows>:${CMAKE_COMMAND}>
+                -E call "${CMAKE_SOURCE_DIR}/shadercompile.bat"
+
         COMMAND ${CMAKE_COMMAND} -E copy_directory
-        "${CMAKE_SOURCE_DIR}/shaders"
-        "$<TARGET_FILE_DIR:GameEngine>/shaders"
+                "${CMAKE_SOURCE_DIR}/shaders"
+                "$<TARGET_FILE_DIR:GameEngine>/shaders"
 )

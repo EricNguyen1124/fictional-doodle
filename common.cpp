@@ -7,7 +7,7 @@
 void LoadShaders(const char* shaderFileName) {
     SDL_GPUShaderStage shaderStage;
 
-    if (StringContains("vejvtyveverto", "vert")) {
+    if (StringContains("aaa", "vert")) {
         SDL_Log("true");
     }
     else {

@@ -9,6 +9,7 @@ typedef struct  {
     SDL_Window *Window;
     SDL_Renderer *Renderer;
     SDL_GPUDevice *Device;
+    SDL_GPUShaderFormat SupportedShaders;
 } AppState;
 
 
@@ -37,7 +38,9 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
         true,
         nullptr);
 
-    LoadShaders("PositionColor.vert.hlsl");
+    state->SupportedShaders = SDL_GetGPUShaderFormats(state->Device);
+
+    LoadShaders("PositionColor.vert", state->Device, state->SupportedShaders);
 
     SDL_Log(Uint32ToBinary(SDL_GetGPUShaderFormats(state->Device)));
     if (state->Device == nullptr)

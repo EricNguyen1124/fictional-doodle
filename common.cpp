@@ -19,12 +19,11 @@ void LoadShaders(const char* shaderFileName, SDL_GPUDevice* device, SDL_GPUShade
         return;
     }
 
-    char* directory;
-
     constexpr char shaderDirectory[] = "shaders/";
     const size_t dirLength = strlen(shaderDirectory);
     const size_t nameLength = strlen(shaderFileName);
 
+    char* directory;
     const char *entrypoint;
     SDL_GPUShaderFormat format;
 
@@ -55,6 +54,8 @@ void LoadShaders(const char* shaderFileName, SDL_GPUDevice* device, SDL_GPUShade
     size_t length;
     char *shaderCode = LoadFile(directory, length);
 
+    free(directory);
+
     SDL_GPUShaderCreateInfo shaderInfo = {
         .code_size = length,
         .code = reinterpret_cast<const Uint8*>(shaderCode),
@@ -66,6 +67,8 @@ void LoadShaders(const char* shaderFileName, SDL_GPUDevice* device, SDL_GPUShade
         .num_storage_buffers = 0,
         .num_uniform_buffers = 0,
     };
+
+    free(shaderCode);
 
     SDL_GPUShader* shader = SDL_CreateGPUShader(device, &shaderInfo);
     if (!shader)

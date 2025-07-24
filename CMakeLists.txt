@@ -8,12 +8,17 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 
 add_subdirectory(vendored/SDL3 EXCLUDE_FROM_ALL)
 
+set(VULKAN_SDK $ENV{VULKAN_SDK})
+include_directories(${VULKAN_SDK}/Include)
+link_directories(${VULKAN_SDK}/Lib)
+
 add_executable(GameEngine main.cpp
         common.cpp
         common.h
         utility.cpp
         utility.h)
 target_link_libraries(GameEngine PRIVATE SDL3::SDL3)
+target_link_libraries(GameEngine PRIVATE ${VULKAN_SDK}/Lib/libvulkan.1.dylib)
 
 if(UNIX)
     add_custom_command(TARGET GameEngine

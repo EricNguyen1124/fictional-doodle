@@ -4,6 +4,7 @@
 #include <iostream>
 #include "common.h"
 #include "utility.h"
+#include <vulkan/vulkan.h>
 
 typedef struct  {
     SDL_Window *Window;
@@ -19,6 +20,16 @@ static SDL_Renderer *renderer = nullptr;
 /* This function runs once at startup. */
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 {
+    uint32_t version = 0;
+    if (vkEnumerateInstanceVersion(&version) == VK_SUCCESS) {
+        std::cout << "Vulkan Version: "
+                  << VK_VERSION_MAJOR(version) << "."
+                  << VK_VERSION_MINOR(version) << "."
+                  << VK_VERSION_PATCH(version) << "\n";
+    } else {
+        std::cerr << "Failed to query Vulkan version.\n";
+    }
+
     SDL_SetAppMetadata("Example Renderer Clear", "1.0", "com.example.renderer-clear");
 
     if (!SDL_Init(SDL_INIT_VIDEO)) {

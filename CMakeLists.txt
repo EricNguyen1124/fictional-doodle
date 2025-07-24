@@ -18,7 +18,6 @@ add_executable(GameEngine main.cpp
         utility.cpp
         utility.h)
 target_link_libraries(GameEngine PRIVATE SDL3::SDL3)
-target_link_libraries(GameEngine PRIVATE ${VULKAN_SDK}/Lib/libvulkan.1.dylib)
 
 if(UNIX)
     add_custom_command(TARGET GameEngine
@@ -61,4 +60,10 @@ elseif(WIN32)
 
             COMMENT "Post-build: compile shaders & copy assets"
     )
+endif()
+
+if(APPLE)
+    target_link_libraries(GameEngine PRIVATE ${VULKAN_SDK}/Lib/libvulkan.1.dylib)
+elseif(WIN32)
+    target_link_libraries(GameEngine PRIVATE vulkan-1)
 endif()

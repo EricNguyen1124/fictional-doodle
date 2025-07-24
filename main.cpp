@@ -13,7 +13,6 @@ typedef struct  {
     SDL_GPUShaderFormat SupportedShaders;
 } AppState;
 
-
 static SDL_Window *window = nullptr;
 static SDL_Renderer *renderer = nullptr;
 

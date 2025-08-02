@@ -48,7 +48,8 @@ QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surfa
     VkPhysicalDeviceProperties deviceProperties;
     vkGetPhysicalDeviceProperties(device, &deviceProperties);
 
-    VkQueueFamilyProperties *queueFamilies = (VkQueueFamilyProperties *) malloc(sizeof(VkQueueFamilyProperties) * queueFamilyCount);
+    VkQueueFamilyProperties *queueFamilies = (VkQueueFamilyProperties *) malloc(
+        sizeof(VkQueueFamilyProperties) * queueFamilyCount);
     vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies);
 
     for (int i = 0; i < queueFamilyCount; i++) {
@@ -111,8 +112,8 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
     uint32_t extensionCount;
     char const *const *extensions = SDL_Vulkan_GetInstanceExtensions(&extensionCount);
 
-    const char **allExts = (const char **) malloc(sizeof(*allExts) * (extensionCount + 1)); // MAC MOMENT
-    memcpy(allExts, extensions, sizeof(*extensions) * extensionCount); // MAC MOMENT
+    const char **allExts = (const char **) malloc(sizeof(char *) * (extensionCount + 1));
+    memcpy(allExts, extensions, sizeof(*extensions) * extensionCount);
     allExts[extensionCount] = VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME;
 
     const char **validationLayers = (const char **) malloc(sizeof(*validationLayers) * 1);
@@ -121,12 +122,18 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
     VkInstanceCreateInfo instanceCreateInfo{
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
         .pApplicationInfo = &appInfo,
-        .enabledExtensionCount = extensionCount + 1, // MAC MOMENT
-        .ppEnabledExtensionNames = allExts,
         .enabledLayerCount = 1,
         .ppEnabledLayerNames = validationLayers,
-        .flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR
+        .enabledExtensionCount = extensionCount,
+        .ppEnabledExtensionNames = extensions
     };
+
+#ifdef __APPLE__
+    instanceCreateInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+    instanceCreateInfo.enabledExtensionCount = extensionCount + 1;
+    instanceCreateInfo.ppEnabledExtensionNames = allExts
+#endif
+
 
     VkInstance instance;
     VkResult result = vkCreateInstance(&instanceCreateInfo, nullptr, &instance);
@@ -171,17 +178,20 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
     };
 
     VkPhysicalDeviceFeatures deviceFeatures{};
-    const char **deviceExtensions = (const char **)malloc(sizeof(*deviceExtensions));
+    const char **deviceExtensions = (const char **) malloc(sizeof(*deviceExtensions));
     deviceExtensions[0] = "VK_KHR_portability_subset";
 
     VkDeviceCreateInfo deviceCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-        .pQueueCreateInfos = &queueCreateInfo,
         .queueCreateInfoCount = 1,
-        .pEnabledFeatures = &deviceFeatures,
-        .enabledExtensionCount = 1,
-        .ppEnabledExtensionNames = deviceExtensions
+        .pQueueCreateInfos = &queueCreateInfo,
+        .pEnabledFeatures = &deviceFeatures
     };
+
+#ifdef __APPLE__
+    deviceCreateInfo.enabledExtensionCount = 1;
+    deviceCreateInfo.ppEnabledExtensionNames = deviceExtensions;
+#endif
 
     VkDevice device;
     result = vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &device);

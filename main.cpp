@@ -17,40 +17,58 @@ typedef struct {
 
 struct QueueFamilyIndices {
     bool hasGraphicsFamily = false;
-    uint32_t graphicsFamily;
+    uint32_t graphicsFamily{};
     bool hasPresentFamily = false;
-    uint32_t presentFamily;
+    uint32_t presentFamily{};
 };
 
-static SDL_Window *window = nullptr;
+struct SwapchainSupportDetails {
+    VkSurfaceCapabilitiesKHR capabilities{};
+    VkSurfaceFormatKHR* formats = nullptr;
+    uint32_t formatCount = 0;
+    VkPresentModeKHR* presentModes = nullptr;
+    uint32_t presentModeCount = 0;
+};
+
 static SDL_Renderer *renderer = nullptr;
 
-VkPhysicalDevice ChoosePhysicalDevice(const VkPhysicalDevice *physicalDevices, const uint32_t deviceCount) {
-    if (physicalDevices == nullptr) return nullptr;
+SwapchainSupportDetails FindSwapChainDetails(const VkPhysicalDevice *device, const VkSurfaceKHR *surface) {
+    SwapchainSupportDetails details;
 
-    for (int i = 0; i < deviceCount; i++) {
-        const VkPhysicalDevice device = physicalDevices[i];
-        VkPhysicalDeviceProperties deviceProperties;
-        vkGetPhysicalDeviceProperties(physicalDevices[i], &deviceProperties);
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(*device, *surface, &details.capabilities);
 
-        return device;
+    uint32_t formatCount;
+    vkGetPhysicalDeviceSurfaceFormatsKHR(*device, *surface, &formatCount, nullptr);
+
+    if (formatCount != 0) {
+        details.formats = (VkSurfaceFormatKHR*) malloc(sizeof(VkSurfaceKHR) * formatCount);
+        details.formatCount = formatCount;
+        vkGetPhysicalDeviceSurfaceFormatsKHR(*device, *surface, &formatCount, details.formats);
     }
 
-    return physicalDevices[0];
+    uint32_t presentModeCount;
+    vkGetPhysicalDeviceSurfacePresentModesKHR(*device, *surface, &presentModeCount, nullptr);
+
+    if (presentModeCount != 0) {
+        details.presentModes = (VkPresentModeKHR*) malloc(sizeof(VkPresentModeKHR) * presentModeCount);
+        details.presentModeCount = presentModeCount;
+        vkGetPhysicalDeviceSurfacePresentModesKHR(*device, *surface, &presentModeCount, details.presentModes);
+    }
+
+    return details;
 }
 
-QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface) {
+QueueFamilyIndices FindQueueFamilies(const VkPhysicalDevice *device, const VkSurfaceKHR *surface) {
     QueueFamilyIndices indices;
 
     uint32_t queueFamilyCount = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+    vkGetPhysicalDeviceQueueFamilyProperties(*device, &queueFamilyCount, nullptr);
 
     VkPhysicalDeviceProperties deviceProperties;
-    vkGetPhysicalDeviceProperties(device, &deviceProperties);
+    vkGetPhysicalDeviceProperties(*device, &deviceProperties);
 
-    VkQueueFamilyProperties *queueFamilies = (VkQueueFamilyProperties *) malloc(
-        sizeof(VkQueueFamilyProperties) * queueFamilyCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies);
+    VkQueueFamilyProperties *queueFamilies = (VkQueueFamilyProperties *) malloc(sizeof(VkQueueFamilyProperties) * queueFamilyCount);
+    vkGetPhysicalDeviceQueueFamilyProperties(*device, &queueFamilyCount, queueFamilies);
 
     for (int i = 0; i < queueFamilyCount; i++) {
         VkQueueFamilyProperties queueFamily = queueFamilies[i];
@@ -61,7 +79,7 @@ QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surfa
         }
 
         VkBool32 presentSupport = false;
-        vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
+        vkGetPhysicalDeviceSurfaceSupportKHR(*device, i, *surface, &presentSupport);
 
         if (presentSupport) {
             indices.presentFamily = i;
@@ -71,6 +89,85 @@ QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surfa
 
     free(queueFamilies);
     return indices;
+}
+
+
+VkPhysicalDevice ChoosePhysicalDevice(const VkPhysicalDevice *physicalDevices, const uint32_t deviceCount, const VkSurfaceKHR *surface) {
+    if (physicalDevices == nullptr) return nullptr;
+
+    for (int i = 0; i < deviceCount; i++) {
+        VkPhysicalDevice device = physicalDevices[i];
+        VkPhysicalDeviceProperties deviceProperties;
+        vkGetPhysicalDeviceProperties(physicalDevices[i], &deviceProperties);
+
+        const QueueFamilyIndices queueIndices = FindQueueFamilies(&device, surface);
+        const bool queueFamiliesComplete = queueIndices.hasGraphicsFamily && queueIndices.hasPresentFamily;
+
+        // need to check if device supports swapchain extension
+
+        const SwapchainSupportDetails swapChainSupport = FindSwapChainDetails(&device, surface);
+        const bool swapChainAdequate = swapChainSupport.formats != nullptr && swapChainSupport.presentModes != nullptr;
+
+        if (queueFamiliesComplete && swapChainAdequate) {
+            return device;
+        }
+    }
+
+    return physicalDevices[0];
+}
+
+VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const VkSurfaceFormatKHR* formats, const uint32_t formatCount) {
+    for (int i = 0; i < formatCount; i++) {
+        VkSurfaceFormatKHR format = formats[i];
+        if (format.format == VK_FORMAT_B8G8R8A8_SRGB && VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+            return format;
+        }
+    }
+
+    return formats[0];
+}
+
+VkPresentModeKHR ChooseSwapPresentMode(const VkPresentModeKHR* presentModes, const uint32_t presentModeCount) {
+    for (int i = 0; i < presentModeCount; i++) {
+        VkPresentModeKHR presentMode = presentModes[0];
+        if (presentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
+            return presentMode;
+        }
+    }
+
+    return VK_PRESENT_MODE_FIFO_KHR;
+}
+
+VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR* capabilities, SDL_Window* window) {
+    if (capabilities->currentExtent.width != 0xFFFFFFFF) {
+        return capabilities->currentExtent;
+    }
+    else {
+        int width, height;
+        SDL_GetWindowSize(window, &width, &height);
+
+        VkExtent2D actualExtent = {
+            (uint32_t) width,
+            (uint32_t) height
+        };
+
+        // Clamp the width and height to the min and max extents
+        if (actualExtent.width < capabilities->minImageExtent.width) {
+            actualExtent.width = capabilities->minImageExtent.width;
+        }
+        else if (actualExtent.width > capabilities->maxImageExtent.width) {
+            actualExtent.width = capabilities->maxImageExtent.width;
+        }
+
+        if (actualExtent.height < capabilities->minImageExtent.height) {
+            actualExtent.height = capabilities->minImageExtent.height;
+        }
+        else if (actualExtent.height > capabilities->maxImageExtent.height) {
+            actualExtent.height = capabilities->maxImageExtent.height;
+        }
+
+        return actualExtent;
+    }
 }
 
 /* This function runs once at startup. */
@@ -131,7 +228,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
 #ifdef __APPLE__
     instanceCreateInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
     instanceCreateInfo.enabledExtensionCount = extensionCount + 1;
-    instanceCreateInfo.ppEnabledExtensionNames = allExts
+    instanceCreateInfo.ppEnabledExtensionNames = allExts;
 #endif
 
 
@@ -165,31 +262,48 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
         return SDL_APP_FAILURE;
     }
 
-    VkPhysicalDevice physicalDevice = ChoosePhysicalDevice(physicalDevices, deviceCount);
+    VkPhysicalDevice physicalDevice = ChoosePhysicalDevice(physicalDevices, deviceCount, &surface);
 
-    QueueFamilyIndices queueFamilies = FindQueueFamilies(physicalDevice, surface);
+    QueueFamilyIndices queueFamilies = FindQueueFamilies(&physicalDevice, &surface);
 
     float queuePriority = 1.0f;
-    VkDeviceQueueCreateInfo queueCreateInfo = {
+
+    VkDeviceQueueCreateInfo *queueCreateInfos = (VkDeviceQueueCreateInfo *) malloc(sizeof(VkDeviceQueueCreateInfo));
+    queueCreateInfos[0] = VkDeviceQueueCreateInfo{
         .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
         .queueFamilyIndex = queueFamilies.graphicsFamily,
         .queueCount = 1,
         .pQueuePriorities = &queuePriority
     };
 
+    if (queueFamilies.presentFamily != queueFamilies.graphicsFamily) {
+        queueCreateInfos = (VkDeviceQueueCreateInfo *) realloc(queueCreateInfos, sizeof(VkDeviceQueueCreateInfo) * 2);
+        queueCreateInfos[1] = VkDeviceQueueCreateInfo {
+            .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+            .queueFamilyIndex = queueFamilies.presentFamily,
+            .queueCount = 1,
+            .pQueuePriorities = &queuePriority
+        };
+
+        SDL_Log("Present and Graphics are on different Queue Families");
+    }
+
     VkPhysicalDeviceFeatures deviceFeatures{};
-    const char **deviceExtensions = (const char **) malloc(sizeof(*deviceExtensions));
-    deviceExtensions[0] = "VK_KHR_portability_subset";
+    const char **deviceExtensions = (const char **) malloc(sizeof(char*));
+    deviceExtensions[0] = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
 
     VkDeviceCreateInfo deviceCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
         .queueCreateInfoCount = 1,
-        .pQueueCreateInfos = &queueCreateInfo,
+        .pQueueCreateInfos = queueCreateInfos,
         .pEnabledFeatures = &deviceFeatures
     };
 
+
 #ifdef __APPLE__
-    deviceCreateInfo.enabledExtensionCount = 1;
+    deviceExtensions = (const char **) realloc(deviceExtensions, sizeof(char*) * 2);
+    deviceCreateInfo.enabledExtensionCount = 2;
+    deviceExtensions[1] = "VK_KHR_portability_subset";
     deviceCreateInfo.ppEnabledExtensionNames = deviceExtensions;
 #endif
 
@@ -204,10 +318,63 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
     VkQueue graphicsQueue;
     vkGetDeviceQueue(device, queueFamilies.graphicsFamily, 0, &graphicsQueue);
 
+    VkQueue presentQueue;
+    vkGetDeviceQueue(device, queueFamilies.presentFamily, 0, &presentQueue);
+
+    SwapchainSupportDetails swapChainSupport = FindSwapChainDetails(&physicalDevice, &surface);
+
+    VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat(swapChainSupport.formats, swapChainSupport.formatCount);
+    VkPresentModeKHR presentMode = ChooseSwapPresentMode(swapChainSupport.presentModes, swapChainSupport.presentModeCount);
+    VkExtent2D extent = ChooseSwapExtent(&swapChainSupport.capabilities, state->Window);
+
+    uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
+
+    if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount) {
+        imageCount = swapChainSupport.capabilities.maxImageCount;
+    }
+
+    VkSwapchainCreateInfoKHR swapchainCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+        .surface = surface,
+        .minImageCount = imageCount,
+        .imageFormat = surfaceFormat.format,
+        .imageColorSpace = surfaceFormat.colorSpace,
+        .imageExtent = extent,
+        .imageArrayLayers = 1,
+        .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        .preTransform = swapChainSupport.capabilities.currentTransform,
+        .compositeAlpha =  VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+        .presentMode = presentMode,
+        .clipped = VK_TRUE,
+        .oldSwapchain = VK_NULL_HANDLE
+    };
+
+    if (queueFamilies.presentFamily != queueFamilies.graphicsFamily) {
+        uint32_t* queueFamilyIndicies = (uint32_t*) malloc(sizeof(uint32_t) * 2);
+        queueFamilyIndicies[0] = queueFamilies.graphicsFamily;
+        queueFamilyIndicies[1] = queueFamilies.presentFamily;
+
+        swapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+        swapchainCreateInfo.queueFamilyIndexCount = 2;
+        swapchainCreateInfo.pQueueFamilyIndices = queueFamilyIndicies;
+    }
+    else {
+        swapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        swapchainCreateInfo.queueFamilyIndexCount = 0; // Optional
+        swapchainCreateInfo.pQueueFamilyIndices = nullptr; // Optional
+    }
+
+    VkSwapchainKHR swapChain;
+    if (vkCreateSwapchainKHR(device, &swapchainCreateInfo, nullptr, &swapChain) != VK_SUCCESS) {
+        SDL_Log("CREATE SWAPCHAIN FAILED");
+        return SDL_APP_FAILURE;
+    }
+
     free(allExts);
     free(validationLayers);
     free(physicalDevices);
     free(deviceExtensions);
+    free(queueCreateInfos);
 
     // state->Device = SDL_CreateGPUDevice(
     //     SDL_GPU_SHADERFORMAT_DXIL | SDL_GPU_SHADERFORMAT_MSL,

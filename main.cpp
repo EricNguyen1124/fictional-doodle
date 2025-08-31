@@ -209,11 +209,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
     uint32_t extensionCount;
     char const *const *extensions = SDL_Vulkan_GetInstanceExtensions(&extensionCount);
 
-    const char **allExts = (const char **) malloc(sizeof(char *) * (extensionCount + 1));
-    memcpy(allExts, extensions, sizeof(*extensions) * extensionCount);
-    allExts[extensionCount] = VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME;
-
-    const char **validationLayers = (const char **) malloc(sizeof(*validationLayers) * 1);
+    const char **validationLayers = (const char **) malloc(sizeof(char *) * 1);
     validationLayers[0] = "VK_LAYER_KHRONOS_validation";
 
     VkInstanceCreateInfo instanceCreateInfo{
@@ -226,6 +222,10 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
     };
 
 #ifdef __APPLE__
+    const char **allExts = (const char **) malloc(sizeof(char *) * (extensionCount + 1));
+    memcpy(allExts, extensions, sizeof(*extensions) * extensionCount);
+    allExts[extensionCount] = VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME;
+
     instanceCreateInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
     instanceCreateInfo.enabledExtensionCount = extensionCount + 1;
     instanceCreateInfo.ppEnabledExtensionNames = allExts;
@@ -294,8 +294,10 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
 
     VkDeviceCreateInfo deviceCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-        .queueCreateInfoCount = 1,
+        .queueCreateInfoCount = 2,
         .pQueueCreateInfos = queueCreateInfos,
+        .enabledExtensionCount = 1,
+        .ppEnabledExtensionNames = deviceExtensions,
         .pEnabledFeatures = &deviceFeatures
     };
 
@@ -370,7 +372,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
         return SDL_APP_FAILURE;
     }
 
-    free(allExts);
+    //free(allExts);
     free(validationLayers);
     free(physicalDevices);
     free(deviceExtensions);

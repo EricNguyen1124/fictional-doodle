@@ -3,7 +3,7 @@
 #include "SDL3/SDL_stdinc.h"
 #include <cstdlib>
 #include <fcntl.h>
-#include <unistd.h>
+// #include <unistd.h>
 
 char* Uint32ToBinary(Uint32 num) {
     char* result = new char[33];
@@ -23,48 +23,17 @@ char* Uint32ToBinary(Uint32 num) {
 }
 
 char *LoadFile(const char *directory, size_t &length) {
-    FILE* shaderFile = fopen(directory, "rb");
-    fseek(shaderFile, 0, SEEK_END);
-    const ssize_t fileLength = ftell(shaderFile);
-    rewind(shaderFile);
-    char* buffer = (char*)malloc(fileLength);
-    fread(buffer, fileLength, 1, shaderFile);
-    fclose(shaderFile);
+    return nullptr;
 
-    length = fileLength;
-    return buffer;
-
-    // const int fileDescriptor = open(directory, O_RDONLY | O_BINARY);
+    // FILE* shaderFile = fopen(directory, "rb");
+    // fseek(shaderFile, 0, SEEK_END);
+    // const ssize_t fileLength = ftell(shaderFile);
+    // rewind(shaderFile);
+    // char* buffer = (char*)malloc(fileLength);
+    // fread(buffer, fileLength, 1, shaderFile);
+    // fclose(shaderFile);
     //
-    // size_t capacity = 1024;
-    // char* buffer = (char*)malloc(capacity);
-    // size_t length = 0;
-    //
-    // while (true) {
-    //     if  (length == capacity) {
-    //         capacity *= 2;
-    //         char* tempBuffer = (char*)realloc(buffer, capacity);
-    //         buffer = tempBuffer;
-    //     }
-    //
-    //     const ssize_t bytesRead = _read(fileDescriptor, buffer + length, (unsigned)capacity);
-    //     if (bytesRead == 0) break;
-    //     if (bytesRead< 0) { perror("read"); }
-    //     length += bytesRead;
-    //
-    // }
-    //
-    // close(fileDescriptor);
-    //
-    // if (length > 0) {
-    //     char* trimmedBuffer = (char*)realloc(buffer, length + 1);
-    //     buffer = trimmedBuffer;
-    //     buffer[length] = '\0';
-    // }
-    // else {
-    //     free(buffer);
-    // }
-    //
+    // length = fileLength;
     // return buffer;
 }
 

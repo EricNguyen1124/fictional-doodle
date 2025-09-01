@@ -378,26 +378,6 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
     free(deviceExtensions);
     free(queueCreateInfos);
 
-    // state->Device = SDL_CreateGPUDevice(
-    //     SDL_GPU_SHADERFORMAT_DXIL | SDL_GPU_SHADERFORMAT_MSL,
-    //     true,
-    //     nullptr);
-    //
-    // state->SupportedShaders = SDL_GetGPUShaderFormats(state->Device);
-    //
-    // LoadShaders("PositionColor.vert", state->Device, state->SupportedShaders);
-    //
-    // SDL_Log(Uint32ToBinary(SDL_GetGPUShaderFormats(state->Device)));
-    // if (state->Device == nullptr) {
-    //     SDL_Log("GPUCreateDevice failed");
-    //     return SDL_APP_FAILURE;
-    // }
-    //
-    // if (!SDL_CreateWindowAndRenderer("examples/renderer/clear", 640, 480, 0, &window, &renderer)) {
-    //     SDL_Log("Couldn't create window/renderer: %s", SDL_GetError());
-    //     return SDL_APP_FAILURE;
-    // }
-
     return SDL_APP_CONTINUE; /* carry on with the program! */
 }
 

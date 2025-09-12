@@ -119,7 +119,7 @@ VkPhysicalDevice ChoosePhysicalDevice(const VkPhysicalDevice *physicalDevices, c
 VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const VkSurfaceFormatKHR* formats, const uint32_t formatCount) {
     for (int i = 0; i < formatCount; i++) {
         VkSurfaceFormatKHR format = formats[i];
-        if (format.format == VK_FORMAT_B8G8R8A8_SRGB && VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+        if (format.format == VK_FORMAT_B8G8R8A8_SRGB && format.format == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
             return format;
         }
     }
@@ -189,7 +189,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
         return SDL_APP_FAILURE;
     }
 
-    auto *state = (AppState *) SDL_calloc(1, sizeof(AppState));
+    auto *state = (AppState*) malloc(sizeof(AppState));
     if (!state) {
         return SDL_APP_FAILURE;
     }
@@ -198,6 +198,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
 
     state->Window = SDL_CreateWindow("Hi", 800, 600, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
 
+    // Create Vulkan Instance
     VkApplicationInfo appInfo{
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
         .pApplicationName = "Hello Triangle",
@@ -205,13 +206,10 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
         .pEngineName = "my engine",
         .apiVersion = VK_API_VERSION_1_4
     };
-
     uint32_t extensionCount;
     char const *const *extensions = SDL_Vulkan_GetInstanceExtensions(&extensionCount);
-
     const char **validationLayers = (const char **) malloc(sizeof(char *) * 1);
     validationLayers[0] = "VK_LAYER_KHRONOS_validation";
-
     VkInstanceCreateInfo instanceCreateInfo{
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
         .pApplicationInfo = &appInfo,
@@ -225,49 +223,44 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
     const char **allExts = (const char **) malloc(sizeof(char *) * (extensionCount + 1));
     memcpy(allExts, extensions, sizeof(*extensions) * extensionCount);
     allExts[extensionCount] = VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME;
-
     instanceCreateInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
     instanceCreateInfo.enabledExtensionCount = extensionCount + 1;
     instanceCreateInfo.ppEnabledExtensionNames = allExts;
 #endif
 
-
     VkInstance instance;
     VkResult result = vkCreateInstance(&instanceCreateInfo, nullptr, &instance);
-
     if (result != VK_SUCCESS) {
         SDL_Log("Create Instance Failed");
         return SDL_APP_FAILURE;
     }
 
+    // Create Vulkan Surface
     VkSurfaceKHR surface;
     if (!SDL_Vulkan_CreateSurface(state->Window, instance, nullptr, &surface)) {
         SDL_Log("Create Surface Failed");
         return SDL_APP_FAILURE;
     }
 
+    // Select physical device
     uint32_t deviceCount = 0;
     result = vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
-
     if (result != VK_SUCCESS) {
         SDL_Log("EnumeratePhysicalDevices Failed");
         return SDL_APP_FAILURE;
     }
-
     VkPhysicalDevice *physicalDevices = (VkPhysicalDevice *) malloc(sizeof(VkPhysicalDevice) * deviceCount);
     result = vkEnumeratePhysicalDevices(instance, &deviceCount, physicalDevices);
-
     if (result != VK_SUCCESS) {
         SDL_Log("EnumeratePhysicalDevices Failed 2");
         return SDL_APP_FAILURE;
     }
-
     VkPhysicalDevice physicalDevice = ChoosePhysicalDevice(physicalDevices, deviceCount, &surface);
 
+    // Create Queues
     QueueFamilyIndices queueFamilies = FindQueueFamilies(&physicalDevice, &surface);
-
     float queuePriority = 1.0f;
-
+    uint32_t queueFamilyCount = 1;
     VkDeviceQueueCreateInfo *queueCreateInfos = (VkDeviceQueueCreateInfo *) malloc(sizeof(VkDeviceQueueCreateInfo));
     queueCreateInfos[0] = VkDeviceQueueCreateInfo{
         .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
@@ -275,7 +268,6 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
         .queueCount = 1,
         .pQueuePriorities = &queuePriority
     };
-
     if (queueFamilies.presentFamily != queueFamilies.graphicsFamily) {
         queueCreateInfos = (VkDeviceQueueCreateInfo *) realloc(queueCreateInfos, sizeof(VkDeviceQueueCreateInfo) * 2);
         queueCreateInfos[1] = VkDeviceQueueCreateInfo {
@@ -284,23 +276,22 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
             .queueCount = 1,
             .pQueuePriorities = &queuePriority
         };
-
+        queueFamilyCount = 2;
         SDL_Log("Present and Graphics are on different Queue Families");
     }
 
+    // Create logical device
     VkPhysicalDeviceFeatures deviceFeatures{};
     const char **deviceExtensions = (const char **) malloc(sizeof(char*));
     deviceExtensions[0] = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
-
     VkDeviceCreateInfo deviceCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-        .queueCreateInfoCount = 2,
+        .queueCreateInfoCount = queueFamilyCount,
         .pQueueCreateInfos = queueCreateInfos,
         .enabledExtensionCount = 1,
         .ppEnabledExtensionNames = deviceExtensions,
         .pEnabledFeatures = &deviceFeatures
     };
-
 
 #ifdef __APPLE__
     deviceExtensions = (const char **) realloc(deviceExtensions, sizeof(char*) * 2);
@@ -311,30 +302,26 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
 
     VkDevice device;
     result = vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &device);
-
     if (result != VK_SUCCESS) {
         SDL_Log("CREATE DEVICE FAILED");
         return SDL_APP_FAILURE;
     }
 
+    // Get Queues
     VkQueue graphicsQueue;
     vkGetDeviceQueue(device, queueFamilies.graphicsFamily, 0, &graphicsQueue);
-
     VkQueue presentQueue;
     vkGetDeviceQueue(device, queueFamilies.presentFamily, 0, &presentQueue);
 
+    // Create Swap Chain
     SwapchainSupportDetails swapChainSupport = FindSwapChainDetails(&physicalDevice, &surface);
-
     VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat(swapChainSupport.formats, swapChainSupport.formatCount);
     VkPresentModeKHR presentMode = ChooseSwapPresentMode(swapChainSupport.presentModes, swapChainSupport.presentModeCount);
     VkExtent2D extent = ChooseSwapExtent(&swapChainSupport.capabilities, state->Window);
-
     uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
-
     if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount) {
         imageCount = swapChainSupport.capabilities.maxImageCount;
     }
-
     VkSwapchainCreateInfoKHR swapchainCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
         .surface = surface,
@@ -350,7 +337,6 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
         .clipped = VK_TRUE,
         .oldSwapchain = VK_NULL_HANDLE
     };
-
     if (queueFamilies.presentFamily != queueFamilies.graphicsFamily) {
         uint32_t* queueFamilyIndicies = (uint32_t*) malloc(sizeof(uint32_t) * 2);
         queueFamilyIndicies[0] = queueFamilies.graphicsFamily;
@@ -365,11 +351,45 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
         swapchainCreateInfo.queueFamilyIndexCount = 0; // Optional
         swapchainCreateInfo.pQueueFamilyIndices = nullptr; // Optional
     }
-
     VkSwapchainKHR swapChain;
     if (vkCreateSwapchainKHR(device, &swapchainCreateInfo, nullptr, &swapChain) != VK_SUCCESS) {
         SDL_Log("CREATE SWAPCHAIN FAILED");
         return SDL_APP_FAILURE;
+    }
+
+    // Get Swap Chain Images
+    VkImage* swapChainImages;
+    uint32_t swapChainImageCount;
+    vkGetSwapchainImagesKHR(device, swapChain, &swapChainImageCount, nullptr);
+    swapChainImages = (VkImage*) malloc(sizeof(VkImage) * swapChainImageCount);
+    vkGetSwapchainImagesKHR(device, swapChain, &swapChainImageCount, swapChainImages);
+
+    // Get Swap Chain Image Views
+    VkImageView* swapChainImageViews = (VkImageView*) malloc(sizeof(VkImageView) * swapChainImageCount);
+    for (int i = 0; i < swapChainImageCount; i++) {
+        VkImageViewCreateInfo imageViewCreateInfo = {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+            .image = swapChainImages[i],
+            .viewType = VK_IMAGE_VIEW_TYPE_2D,
+            .format = surfaceFormat.format,
+            .components = {
+                .r = VK_COMPONENT_SWIZZLE_IDENTITY,
+                .g = VK_COMPONENT_SWIZZLE_IDENTITY,
+                .b = VK_COMPONENT_SWIZZLE_IDENTITY,
+                .a = VK_COMPONENT_SWIZZLE_IDENTITY
+            },
+            .subresourceRange = {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1
+            }
+        };
+        if (vkCreateImageView(device, &imageViewCreateInfo, nullptr, &swapChainImageViews[i]) != VK_SUCCESS) {
+            SDL_Log("Create Image View Failed!");
+            return SDL_APP_FAILURE;
+        }
     }
 
     //free(allExts);
@@ -377,6 +397,9 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
     free(physicalDevices);
     free(deviceExtensions);
     free(queueCreateInfos);
+    free(swapChainImages);
+    free(swapChainImageViews);
+
 
     return SDL_APP_CONTINUE; /* carry on with the program! */
 }

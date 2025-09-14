@@ -3,7 +3,11 @@
 #include "SDL3/SDL_stdinc.h"
 #include <cstdlib>
 #include <fcntl.h>
-// #include <unistd.h>
+#include <unistd.h>
+
+#include "SDL3/SDL_filesystem.h"
+#include "SDL3/SDL_log.h"
+#include <limits.h>
 
 char* Uint32ToBinary(Uint32 num) {
     char* result = new char[33];
@@ -23,18 +27,20 @@ char* Uint32ToBinary(Uint32 num) {
 }
 
 char *LoadFile(const char *directory, size_t &length) {
-    return nullptr;
+    FILE* shaderFile = fopen(directory, "rb");
+    if (!shaderFile) {
+        perror("fopen failed");
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Tried: %s", directory);
+        return nullptr;
+    }
+    fseek(shaderFile, 0, SEEK_END);
+    length = ftell(shaderFile);
+    rewind(shaderFile);
+    char* buffer = (char*)malloc(length);
+    fread(buffer, length, 1, shaderFile);
+    fclose(shaderFile);
 
-    // FILE* shaderFile = fopen(directory, "rb");
-    // fseek(shaderFile, 0, SEEK_END);
-    // const ssize_t fileLength = ftell(shaderFile);
-    // rewind(shaderFile);
-    // char* buffer = (char*)malloc(fileLength);
-    // fread(buffer, fileLength, 1, shaderFile);
-    // fclose(shaderFile);
-    //
-    // length = fileLength;
-    // return buffer;
+    return buffer;
 }
 
 bool StringContains(const char* searchString, const char* target) {

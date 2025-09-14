@@ -1,11 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
-shopt -s nullglob        # prevents literal patterns when no files match
+shopt -s nullglob
 
-for filename in shaders/*.{vert,frag,comp}.hlsl; do
-    [ -f "$filename" ] || continue         # extra safety
+GLSLC=~/VulkanSDK/1.4.313.1/macOS/bin/glslc
 
-    base="${filename%.hlsl}"               # strip the .hlsl once
-    shadercross "$filename" -o "${base}.dxil"
-    shadercross "$filename" -o "${base}.msl"
+for filename in shaders/*.{vert,frag}; do
+  [ -f "$filename" ] || continue
+
+  # Map by extension → output name
+  case "$filename" in
+    *.vert) out="vert.spv" ;;
+    *.frag) out="frag.spv" ;;
+    *) continue ;;
+  esac
+
+  "$GLSLC" "$filename" -o shaders/compiled/"$out"
 done
